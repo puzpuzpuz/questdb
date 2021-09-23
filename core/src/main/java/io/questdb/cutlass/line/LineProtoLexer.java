@@ -193,7 +193,6 @@ public class LineProtoLexer implements Mutable, Closeable {
                     throw LineProtoException.INSTANCE;
             }
         }
-        escapeQuote = false;
     }
 
     private void onEquals() {
