@@ -25,6 +25,7 @@
 package org.questdb;
 
 import io.questdb.std.*;
+import io.questdb.std.datetime.microtime.MicrosecondClockImpl;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
@@ -43,16 +44,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class ReadWriteLockBenchmark {
 
-    private static final int NUM_SPINS = 10;
+    private static final int NUM_SPINS = 50;
 
-    private final Rnd rnd = new Rnd();
+    private final Rnd rnd = new Rnd(NanosecondClockImpl.INSTANCE.getTicks(), MicrosecondClockImpl.INSTANCE.getTicks());
 
     public static void main(String[] args) throws RunnerException {
         Options opt = new OptionsBuilder()
                 .include(ReadWriteLockBenchmark.class.getSimpleName())
                 .warmupIterations(3)
-                .measurementIterations(3)
-                .addProfiler("gc")
+                .measurementIterations(10)
                 .forks(1)
                 .build();
 
@@ -69,7 +69,7 @@ public class ReadWriteLockBenchmark {
     }
 
     @Benchmark
-    public void testLock(BenchmarkState state, Blackhole bh) {
+    public void testReadLock(BenchmarkState state, Blackhole bh) {
         final Lock rLock = state.lock.readLock();
         rLock.lock();
         // emulate some work
@@ -81,11 +81,27 @@ public class ReadWriteLockBenchmark {
         rLock.unlock();
     }
 
+    @Benchmark
+    public void testReadWriteLock(BenchmarkState state, Blackhole bh) {
+        final int n = rnd.nextInt(state.readWriteRatio);
+        final Lock lock = n == 0 ? state.lock.writeLock() : state.lock.readLock();
+        lock.lock();
+        // emulate some work
+        int sum = 0;
+        for (int i = 0; i < NUM_SPINS; i++) {
+            sum += rnd.nextInt();
+        }
+        bh.consume(sum);
+        lock.unlock();
+    }
+
     @State(Scope.Benchmark)
     public static class BenchmarkState {
 
         @Param({"JUC", "SIMPLE", "BIASED", "XBIASED", "TLBIASED"})
         public LockType type;
+        @Param({"1000", "10000", "100000"})
+        public int readWriteRatio;
         public ReadWriteLock lock;
 
         @Setup(Level.Trial)
