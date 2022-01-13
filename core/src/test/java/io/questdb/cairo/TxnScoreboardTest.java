@@ -25,7 +25,6 @@
 package io.questdb.cairo;
 
 import io.questdb.mp.SOCountDownLatch;
-import io.questdb.std.Files;
 import io.questdb.std.FilesFacade;
 import io.questdb.std.FilesFacadeImpl;
 import io.questdb.std.str.LPSZ;
@@ -34,7 +33,11 @@ import io.questdb.test.tools.TestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 
 public class TxnScoreboardTest extends AbstractCairoTest {
     @Test
@@ -404,5 +407,194 @@ public class TxnScoreboardTest extends AbstractCairoTest {
                 scoreboard.acquireTxn(900992);
             }
         });
+    }
+
+    @Test
+    public void testCheckScoreboardHasReadersBeforeLastCommittedTxn() throws Exception {
+        TestUtils.assertMemoryLeak(() -> {
+            try (
+                    final Path shmPath = new Path();
+                    final TxnScoreboard txnScoreboard = new TxnScoreboard(FilesFacadeImpl.INSTANCE, 1024).ofRW(shmPath.of(root))
+            ) {
+                final long lastCommittedTxn = 2;
+
+                // Thread A (reader) - grabs read permit
+                txnScoreboard.acquireTxn(lastCommittedTxn);
+                // Thread B (reader) - lags behind and grabs read permit for the previous transaction
+                txnScoreboard.acquireTxn(lastCommittedTxn - 1);
+
+                // Thread C (writer) - checkScoreboardHasReadersBeforeLastCommittedTxn
+                txnScoreboard.acquireTxn(lastCommittedTxn);
+                txnScoreboard.releaseTxn(lastCommittedTxn);
+                Assert.assertTrue(txnScoreboard.getMin() != lastCommittedTxn);
+
+                // Thread A (reader) - releases read permit
+                txnScoreboard.releaseTxn(lastCommittedTxn);
+                // Thread B (reader) - releases read permit
+                txnScoreboard.releaseTxn(lastCommittedTxn - 1);
+            }
+        });
+    }
+
+    @Test
+    public void testHammer() throws Exception {
+        testHammerScoreboard(4, 1, 10_000);
+    }
+
+    private void testHammerScoreboard(int readers, int writers, int iterations) throws Exception {
+        try (
+                final Path shmPath = new Path();
+                final TxnScoreboard scoreboard = new TxnScoreboard(FilesFacadeImpl.INSTANCE, 1024).ofRW(shmPath.of(root))
+        ) {
+            final CyclicBarrier barrier = new CyclicBarrier(readers + writers);
+            final CountDownLatch latch = new CountDownLatch(readers + writers);
+            final AtomicLong txn = new AtomicLong();
+            final AtomicInteger anomaly = new AtomicInteger();
+
+//            LaggingReader laggingReader = new LaggingReader(scoreboard, barrier, latch, txn, iterations);
+//            laggingReader.start();
+
+            for (int i = 0; i < readers; i++) {
+                Reader reader = new Reader(scoreboard, barrier, latch, txn, anomaly, iterations);
+                reader.start();
+            }
+
+            for (int i = 0; i < writers; i++) {
+                Writer writer = new Writer(scoreboard, barrier, latch, txn, anomaly, iterations);
+                writer.start();
+            }
+
+            latch.await();
+
+            Assert.assertEquals(0, anomaly.get());
+        }
+    }
+
+    private static class Reader extends Thread {
+
+        private final TxnScoreboard scoreboard;
+        private final CyclicBarrier barrier;
+        private final CountDownLatch latch;
+        private final AtomicLong txn;
+        private final AtomicInteger anomaly;
+        private final int iterations;
+
+        private Reader(TxnScoreboard scoreboard, CyclicBarrier barrier, CountDownLatch latch, AtomicLong txn, AtomicInteger anomaly, int iterations) {
+            this.scoreboard = scoreboard;
+            this.barrier = barrier;
+            this.latch = latch;
+            this.txn = txn;
+            this.anomaly = anomaly;
+            this.iterations = iterations;
+        }
+
+        @Override
+        public void run() {
+            try {
+                barrier.await();
+                for (int i = 0; i < iterations; i++) {
+                    long t = txn.get();
+                    scoreboard.acquireTxn(t);
+                    LockSupport.parkNanos(1);
+                    scoreboard.releaseTxn(t);
+                    long min = scoreboard.getMin();
+                    long prevCount = scoreboard.getActiveReaderCount(t - 1);
+                    if (min == t && prevCount > 0) {
+                        anomaly.incrementAndGet();
+                    }
+                    LockSupport.parkNanos(10);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                latch.countDown();
+            }
+        }
+    }
+
+    private static class LaggingReader extends Thread {
+
+        private final TxnScoreboard scoreboard;
+        private final CyclicBarrier barrier;
+        private final CountDownLatch latch;
+        private final AtomicLong txn;
+        private final int iterations;
+
+        private LaggingReader(TxnScoreboard scoreboard, CyclicBarrier barrier, CountDownLatch latch, AtomicLong txn, int iterations) {
+            this.scoreboard = scoreboard;
+            this.barrier = barrier;
+            this.latch = latch;
+            this.txn = txn;
+            this.iterations = iterations;
+        }
+
+        @Override
+        public void run() {
+            try {
+                final long lag = 1;
+                barrier.await();
+                for (int i = 0; i < iterations; i++) {
+                    long t = txn.get() - lag;
+                    scoreboard.acquireTxn(t);
+                    LockSupport.parkNanos(5);
+                    long newT = txn.get() - lag;
+                    scoreboard.acquireTxn(newT);
+                    scoreboard.releaseTxn(t);
+                    scoreboard.releaseTxn(newT);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                latch.countDown();
+            }
+        }
+    }
+
+    private static class Writer extends Thread {
+
+        private final TxnScoreboard scoreboard;
+        private final CyclicBarrier barrier;
+        private final CountDownLatch latch;
+        private final AtomicLong txn;
+        private final AtomicInteger anomaly;
+        private final int iterations;
+
+        private Writer(TxnScoreboard scoreboard, CyclicBarrier barrier, CountDownLatch latch, AtomicLong txn, AtomicInteger anomaly, int iterations) {
+            this.scoreboard = scoreboard;
+            this.barrier = barrier;
+            this.latch = latch;
+            this.txn = txn;
+            this.anomaly = anomaly;
+            this.iterations = iterations;
+        }
+
+        private boolean checkScoreboardHasReadersBeforeLastCommittedTxn() {
+            long lastCommittedTxn = txn.get();
+            try {
+                scoreboard.acquireTxn(lastCommittedTxn);
+                scoreboard.releaseTxn(lastCommittedTxn);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return scoreboard.getMin() != lastCommittedTxn;
+        }
+
+        @Override
+        public void run() {
+            try {
+                barrier.await();
+                for (int i = 0; i < iterations; i++) {
+                    txn.incrementAndGet();
+//                    if (!checkScoreboardHasReadersBeforeLastCommittedTxn()) {
+//                        anomaly.incrementAndGet();
+//                    }
+                    LockSupport.parkNanos(50);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                latch.countDown();
+            }
+        }
     }
 }
