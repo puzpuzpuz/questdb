@@ -470,7 +470,7 @@ public class TxnScoreboardTest extends AbstractCairoTest {
 
     @Test
     public void testHammer() throws Exception {
-        testHammerScoreboard(8, 1, 10_000);
+        testHammerScoreboard(4, 1, 10_000);
     }
 
     @SuppressWarnings("SameParameterValue")

@@ -60,18 +60,18 @@ public class TableReaderTxnScoreboardInteractionTest extends AbstractCairoTest {
 
                 try (TableReader reader = engine.getReader(AllowAllCairoSecurityContext.INSTANCE, "x")) {
                     Assert.assertEquals(2, reader.getTxn());
-                    Assert.assertEquals(2, txnScoreboard.getMin());
+                    Assert.assertEquals(1, txnScoreboard.getMin());
                     Assert.assertEquals(1, txnScoreboard.getActiveReaderCount(2));
 
                     try (TableReader reader2 = engine.getReader(AllowAllCairoSecurityContext.INSTANCE, "x")) {
                         Assert.assertEquals(2, reader2.getTxn());
-                        Assert.assertEquals(2, txnScoreboard.getMin());
+                        Assert.assertEquals(1, txnScoreboard.getMin());
                         Assert.assertEquals(2, txnScoreboard.getActiveReaderCount(2));
 
                         addRow(w);
                         try (TableReader reader3 = engine.getReader(AllowAllCairoSecurityContext.INSTANCE, "x")) {
                             Assert.assertEquals(3, reader3.getTxn());
-                            Assert.assertEquals(2, txnScoreboard.getMin());
+                            Assert.assertEquals(1, txnScoreboard.getMin());
                             Assert.assertEquals(2, txnScoreboard.getActiveReaderCount(2));
                             Assert.assertEquals(1, txnScoreboard.getActiveReaderCount(3));
                         }
@@ -89,7 +89,7 @@ public class TableReaderTxnScoreboardInteractionTest extends AbstractCairoTest {
 
                 try (TableReader reader = engine.getReader(AllowAllCairoSecurityContext.INSTANCE, "x")) {
                     Assert.assertEquals(4, reader.getTxn());
-                    Assert.assertEquals(4, txnScoreboard.getMin());
+                    Assert.assertEquals(3, txnScoreboard.getMin());
                     Assert.assertEquals(1, txnScoreboard.getActiveReaderCount(4));
                     Assert.assertEquals(0, txnScoreboard.getActiveReaderCount(5));
                 }
