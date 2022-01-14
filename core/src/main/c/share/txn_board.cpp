@@ -67,6 +67,10 @@ class txn_scoreboard_t {
     // 1-based min txn that is in-use
     // we have to use 1 based txn to rule out possibility of 0 txn
     // 0 is initial value when shared memory is created
+
+    // Note(puzpuzpuz): Split min and min version
+    // std::atomic<int64_t> min = 0;
+    // std::atomic<int64_t> min_version = 0;
     std::atomic<min_version_pair> min_version{min_version_pair(L_MAX, 0)};
     std::atomic<T> counts[];
 
@@ -84,6 +88,8 @@ class txn_scoreboard_t {
 
     inline bool increment_count(int64_t txn) {
         auto curr_min_version = min_version.load(std::memory_order_acquire);
+        auto cmin_version = min_version.load();
+
         while (true) {
             auto current_min = curr_min_version.get_min();
             if (current_min > txn) {
@@ -92,9 +98,18 @@ class txn_scoreboard_t {
             _get_count(txn).fetch_add(1, std::memory_order_acq_rel);
 
             min_version_pair updated_min_version {current_min, curr_min_version.get_version() + 1};
-            if (!min_version.compare_exchange_strong(curr_min_version, updated_min_version)) {
+            // Note(puzpuzpuz): we don't really need a CAS here. It's enough to check that the min version didn't change;
+            //                  We could use same approach as in seqlock here: whoever does update_min() is the writer.
+            //if (!min_version.compare_exchange_strong(curr_min_version, updated_min_version)) {
+            auto cmin_version_new = min_version.load();
+            if (cmin_version_new != cmin_version) {
                 // roll back
-                _get_count(txn).fetch_add(-1, std::memory_order_acq_rel);
+                auto c = _get_count(txn).fetch_add(-1, std::memory_order_acq_rel);
+                // Note(puzpuzpuz): we may need it or not
+                if (c == 0) {
+                    update_min();
+                }
+                return false;
             } else {
                 return true;
             }
@@ -102,6 +117,13 @@ class txn_scoreboard_t {
     }
 
     inline void update_min(const int64_t txn) {
+        auto cmin_version = min_version.load();
+        // Note(puzpuzpuz): update min_version to write intent value (odd)
+        if (!cas(min_version)) {
+            // someone else succeeded - just exit
+            return;
+        }
+
         auto current_min = min_version.load(std::memory_order_acquire);
         auto new_min = current_min.get_min();
         while (new_min < txn) {
@@ -114,6 +136,7 @@ class txn_scoreboard_t {
                     current_min,
                     min_version_pair{new_min, current_min.get_version() + 1},
                     std::memory_order_acq_rel)) {
+                // Note(puzpuzpuz): update min_version to write finished value (even)
                 return;
             }
             new_min = current_min.get_min();
@@ -132,6 +155,7 @@ public:
 
     inline T get_count(int64_t offset) {
         if (offset < get_min()) {
+            // Note(puzpuzpuz): would be nice to have a meaningful comment here.
             return 0;
         }
         return get_count_unchecked(offset);
@@ -142,14 +166,18 @@ public:
     }
 
     inline void txn_release(int64_t txn) {
+        // Note(puzpuzpuz): we could move this thing into the if body
         const int64_t max_offset = get_max();
         // this is atomic decrement
         if (_get_count(txn).fetch_add(-1) == 0 && get_min() == txn) {
+            // Note(puzpuzpuz): ideally this should be the only place where we call update_min()
             update_min(max_offset);
         }
     }
 
     inline int32_t txn_acquire(int64_t txn) {
+        // Note(puzpuzpuz): we may need to read the min value and initialize it with a CAS if it's the default one here
+
         int64_t _min = get_min();
         if (txn < _min) {
             return -2;
