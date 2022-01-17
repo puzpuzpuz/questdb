@@ -40,8 +40,8 @@ class txn_scoreboard_t {
 
     template<typename TT>
     inline static TT set_max_atomic(std::atomic<TT> &slot, TT value) {
-        TT current = slot.load();
-        while (value > current && !slot.compare_exchange_weak(current, value));
+        TT current = slot.load(std::memory_order_relaxed);
+        while (value > current && !slot.compare_exchange_weak(current, value, std::memory_order_release));
         return std::max(value, current);
     }
 
@@ -56,13 +56,14 @@ class txn_scoreboard_t {
         // there cannot be increments for txn 99, 98 etc
         // When an attempt to acquire below max happens
         // the attempt is rejected and TableReader should re-read _txn file
-        auto current_max = max.load();
+        auto current_max = max.load(std::memory_order_acquire);
         if (txn < current_max) {
             return false;
         }
         get_counter(txn)++; // atomic
 
-        while (!max.compare_exchange_weak(current_max, txn) && txn > current_max);
+        current_max = max.load(std::memory_order_acquire);
+        while (txn > current_max && !max.compare_exchange_weak(current_max, txn, std::memory_order_release));
 
         if (txn < current_max) {
             // We cannot increment below max, only max or higher
@@ -74,7 +75,7 @@ class txn_scoreboard_t {
     }
 
     inline int64_t update_min(const int64_t offset) {
-        int64_t o = min.load();
+        int64_t o = min.load(std::memory_order_acquire);
         const int64_t check_limit = std::min(offset, o + size); // If no lock for full size, means not locks at all
         while (o < check_limit && get_count(o) == 0) {
             o++;
@@ -94,8 +95,8 @@ public:
     }
 
     inline int64_t txn_release(int64_t txn) {
-        auto countAfter = get_counter(txn).fetch_sub(1) - 1;
         auto _min = min.load();
+        auto countAfter = get_counter(txn).fetch_sub(1) - 1;
         if (txn < _min) {
             return L_MIN;
         }
@@ -107,9 +108,9 @@ public:
 
     // txn should be >= 0
     inline int64_t txn_acquire(int64_t txn) {
-        int64_t current_min = min.load();
+        int64_t current_min = min.load(std::memory_order_acquire);
         if (current_min == L_MIN) {
-            if (min.compare_exchange_strong(current_min, txn)) {
+            if (min.compare_exchange_strong(current_min, txn, std::memory_order_release)) {
                 current_min = txn;
             }
         }
