@@ -93,9 +93,13 @@ public:
         return get_counter(offset);
     }
 
-    inline T txn_release(int64_t txn) {
+    inline int64_t txn_release(int64_t txn) {
         auto countAfter = get_counter(txn).fetch_sub(1) - 1;
-        if (countAfter == 0 && min.load() == txn) {
+        auto _min = min.load();
+        if (txn < _min) {
+            return L_MIN;
+        }
+        if (countAfter == 0 && _min == txn) {
             update_min(max);
         }
         return countAfter;
