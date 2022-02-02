@@ -103,6 +103,9 @@ public class MemoryPMARImpl extends MemoryPARWImpl implements MemoryMAR {
 
     @Override
     protected void release(long address) {
+        if (ff.msync(address, getPageSize(), false) != 0) {
+            throw CairoException.instance(ff.errno()).put("Cannot msync released page fd=").put(fd);
+        }
         ff.munmap(address, getPageSize(), memoryTag);
     }
 
