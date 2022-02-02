@@ -1848,6 +1848,10 @@ class SqlOptimiser {
         if (Chars.startsWith(tableName, QueryModel.NO_ROWID_MARKER)) {
             lo += QueryModel.NO_ROWID_MARKER.length();
         }
+        if (Chars.startsWith(tableName, QueryModel.PG_PUBLIC_SCHEMA_MARKER)) {
+            lo += QueryModel.PG_PUBLIC_SCHEMA_MARKER.length();
+            tableNameNode.token = tableNameNode.token.subSequence(QueryModel.PG_PUBLIC_SCHEMA_MARKER.length(), tableNameNode.token.length());
+        }
 
         if (lo == hi) {
             throw SqlException.$(tableNamePosition, "come on, where is table name?");

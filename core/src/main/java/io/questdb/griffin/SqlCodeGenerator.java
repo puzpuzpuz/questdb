@@ -2145,6 +2145,7 @@ public class SqlCodeGenerator implements Mutable, Closeable {
                         && twoDeepNested.getWhereClause() == null
                         && twoDeepNested.getLatestBy().size() == 0
                         && (tableNameEn = twoDeepNested.getTableName()) != null
+                        && tableNameEn.type != ExpressionNode.FUNCTION
         ) {
             CharSequence tableName = tableNameEn.token;
             try (TableReader reader = engine.getReader(executionContext.getCairoSecurityContext(), tableName)) {

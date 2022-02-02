@@ -25,6 +25,7 @@
 package io.questdb.griffin.model;
 
 import io.questdb.cairo.sql.Function;
+import io.questdb.griffin.engine.functions.catalogue.Constants;
 import io.questdb.std.*;
 import io.questdb.std.str.CharSink;
 
@@ -37,6 +38,7 @@ public class QueryModel implements Mutable, ExecutionModel, AliasTranslator, Sin
     public static final int ORDER_DIRECTION_ASCENDING = 0;
     public static final int ORDER_DIRECTION_DESCENDING = 1;
     public static final String NO_ROWID_MARKER = "*!*";
+    public static final String PG_PUBLIC_SCHEMA_MARKER = Constants.PUBLIC + ".";
     public static final int JOIN_INNER = 1;
     public static final int JOIN_OUTER = 2;
     public static final int JOIN_CROSS = 3;
