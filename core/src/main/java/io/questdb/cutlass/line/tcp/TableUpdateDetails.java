@@ -498,9 +498,12 @@ public class TableUpdateDetails implements Closeable {
             if (colIndex < 0) {
                 return colIndex;
             }
-            int writerColIndex = latestKnownMetadata.getWriterIndex(colIndex);
-            updateColumnTypeCache(colIndex, writerColIndex, latestKnownMetadata);
-            return writerColIndex;
+            if (!latestKnownMetadata.hasColumn(colIndex)) {
+                return -1;
+            }
+            //int writerColIndex = latestKnownMetadata.getWriterIndex(colIndex);
+            updateColumnTypeCache(colIndex, latestKnownMetadata);
+            return colIndex;
         }
 
         int getColumnType(int colIndex) {
@@ -570,16 +573,16 @@ public class TableUpdateDetails implements Closeable {
                 // Get the latest metadata.
                 // TODO(puzpuzpuz): fix uncompressed for non-WAL tables returned
                 //  by engine.getUncompressedMetadata() and start using it here.
-                latestKnownMetadata = engine.getCompressedMetadata(
+                latestKnownMetadata = engine.getUncompressedMetadata(
                         AllowAllCairoSecurityContext.INSTANCE,
                         tableNameUtf16
                 );
             }
         }
 
-        private void updateColumnTypeCache(int colIndex, int writerColIndex, TableRecordMetadata metadata) {
+        private void updateColumnTypeCache(int writerColIndex, TableRecordMetadata metadata) {
             columnCount = metadata.getColumnCount();
-            final int colType = metadata.getColumnType(colIndex);
+            final int colType = metadata.getColumnType(writerColIndex);
             final int geoHashBits = ColumnType.getGeoHashBits(colType);
             columnTypes.extendAndSet(writerColIndex, colType);
             columnTypeMeta.extendAndSet(writerColIndex + 1,
