@@ -50,40 +50,43 @@ import java.util.Arrays;
  */
 public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Visitor, Mutable {
 
-    static final int ADD = 14;  // a + b
+    // Stub value for opcodes and options
+    static final int UNDEFINED_CODE = -1;
+
+    // Opcodes:
+    // Return code. Breaks the loop
+    static final int RET = 0; // ret
+    // Constants
+    static final int IMM = 1;
+    // Columns
+    static final int MEM = 2;
+    // Bind variables and deferred symbols
+    static final int VAR = 3;
+    // Operator codes
+    static final int NEG = 4;   // -a
+    static final int NOT = 5;   // !a
     static final int AND = 6;   // a && b
+    static final int OR  = 7;   // a || b
+    static final int EQ  = 8;   // a == b
+    static final int NE  = 9;   // a != b
+    static final int LT  = 10;  // a <  b
+    static final int LE  = 11;  // a <= b
+    static final int GT  = 12;  // a >  b
+    static final int GE  = 13;  // a >= b
+    static final int ADD = 14;  // a + b
+    static final int SUB = 15;  // a - b
+    static final int MUL = 16;  // a * b
     static final int DIV = 17;  // a / b
-    static final int EQ = 8;   // a == b
-    static final int F4_TYPE = 3;
-    static final int F8_TYPE = 5;
-    static final int GE = 13;  // a >= b
-    static final int GT = 12;  // a >  b
+
     // Options:
     // Data types
     static final int I1_TYPE = 0;
     static final int I2_TYPE = 1;
     static final int I4_TYPE = 2;
+    static final int F4_TYPE = 3;
     static final int I8_TYPE = 4;
-    // Constants
-    static final int IMM = 1;
-    static final int LE = 11;  // a <= b
-    static final int LT = 10;  // a <  b
-    // Columns
-    static final int MEM = 2;
-    static final int MUL = 16;  // a * b
-    static final int NE = 9;   // a != b
-    // Operator codes
-    static final int NEG = 4;   // -a
-    static final int NOT = 5;   // !a
-    static final int OR = 7;   // a || b
-    // Opcodes:
-    // Return code. Breaks the loop
-    static final int RET = 0; // ret
-    static final int SUB = 15;  // a - b
-    // Stub value for opcodes and options
-    static final int UNDEFINED_CODE = -1;
-    // Bind variables and deferred symbols
-    static final int VAR = 3;
+    static final int F8_TYPE = 5;
+
     // contains <memory_offset, constant_node> pairs for backfilling purposes
     private final LongObjHashMap<ExpressionNode> backfillNodes = new LongObjHashMap<>();
     private final PredicateContext predicateContext = new PredicateContext();
