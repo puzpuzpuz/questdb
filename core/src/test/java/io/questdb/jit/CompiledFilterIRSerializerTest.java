@@ -643,17 +643,17 @@ public class CompiledFilterIRSerializerTest extends BaseFunctionFactoryTest {
     }
 
     private void assertOptionsHint(String msg, int options, OptionsHint expectedHint) {
-        int code = (options >> 3) & 0b11;
+        int code = (options >> 4) & 0b11;
         Assert.assertEquals(msg, expectedHint.code, code);
     }
 
     private void assertOptionsNullChecks(int options, boolean expectedFlag) {
-        int f = (options >> 5) & 1;
+        int f = (options >> 6) & 1;
         Assert.assertEquals(expectedFlag ? 1 : 0, f);
     }
 
     private void assertOptionsSize(String msg, int options, int expectedSize) {
-        int size = 1 << ((options >> 1) & 0b11);
+        int size = 1 << ((options >> 1) & 0b111);
         Assert.assertEquals(msg, expectedSize, size);
     }
 

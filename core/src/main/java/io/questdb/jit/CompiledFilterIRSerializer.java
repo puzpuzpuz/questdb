@@ -189,9 +189,9 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
      * @return JIT compiler options stored in a single int in the following way:
      * <ul>
      * <li>1 LSB - debug flag</li>
-     * <li>2-3 LSBs - filter's arithmetic type size (widest type size): 0 - 1B, 1 - 2B, 2 - 4B, 3 - 8B</li>
-     * <li>4-5 LSBs - filter's execution hint: 0 - scalar, 1 - single size (SIMD-friendly), 2 - mixed sizes</li>
-     * <li>6 LSB - flag to include null checks for column values into compiled filter</li>
+     * <li>2-4 LSBs - filter's arithmetic type size (widest type size): 0 - 1B, 1 - 2B, 2 - 4B, 3 - 8B, 4 - 16B</li>
+     * <li>5-6 LSBs - filter's execution hint: 0 - scalar, 1 - single size (SIMD-friendly), 2 - mixed sizes</li>
+     * <li>7 LSB - flag to include null checks for column values into compiled filter</li>
      * </ul>
      * <p>
      * Examples:
@@ -215,10 +215,10 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
         }
         if (!scalar && !forceScalarMode) {
             int executionHint = typesObserver.hasMixedSizes() ? 2 : 1;
-            options = options | (executionHint << 3);
+            options = options | (executionHint << 4);
         }
 
-        options = options | ((nullChecks ? 1 : 0) << 5);
+        options = options | ((nullChecks ? 1 : 0) << 6);
 
         return options;
     }
