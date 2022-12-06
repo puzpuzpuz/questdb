@@ -110,12 +110,13 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
 
     // Options:
     // Data types
-    static final int I1_TYPE = 0;
-    static final int I2_TYPE = 1;
-    static final int I4_TYPE = 2;
-    static final int F4_TYPE = 3;
-    static final int I8_TYPE = 4;
-    static final int F8_TYPE = 5;
+    static final int I1_TYPE  = 0;
+    static final int I2_TYPE  = 1;
+    static final int I4_TYPE  = 2;
+    static final int F4_TYPE  = 3;
+    static final int I8_TYPE  = 4;
+    static final int F8_TYPE  = 5;
+    static final int I16_TYPE = 6;
 
     // contains <memory_offset, constant_node> pairs for backfilling purposes
     private final LongObjHashMap<ExpressionNode> backfillNodes = new LongObjHashMap<>();
@@ -291,6 +292,7 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
                 return I8_TYPE;
             case ColumnType.DOUBLE:
                 return F8_TYPE;
+            case ColumnType.LONG128: // not supported for vars, but supported for columns
             default:
                 return UNDEFINED_CODE;
         }
@@ -319,6 +321,8 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
                 return I8_TYPE;
             case ColumnType.DOUBLE:
                 return F8_TYPE;
+            case ColumnType.LONG128:
+                return I16_TYPE;
             default:
                 return UNDEFINED_CODE;
         }
@@ -922,13 +926,14 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
      */
     private static class TypesObserver implements Mutable {
 
-        private static final int F4_INDEX = 3;
-        private static final int F8_INDEX = 5;
-        private static final int I1_INDEX = 0;
-        private static final int I2_INDEX = 1;
-        private static final int I4_INDEX = 2;
-        private static final int I8_INDEX = 4;
-        private static final int TYPES_COUNT = F8_INDEX + 1;
+        private static final int I1_INDEX  = 0;
+        private static final int I2_INDEX  = 1;
+        private static final int I4_INDEX  = 2;
+        private static final int F4_INDEX  = 3;
+        private static final int I8_INDEX  = 4;
+        private static final int F8_INDEX  = 5;
+        private static final int I16_INDEX = 6;
+        private static final int TYPES_COUNT = I16_INDEX + 1;
 
         private final byte[] sizes = new byte[TYPES_COUNT];
 
@@ -1003,6 +1008,9 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
                 case F8_TYPE:
                     sizes[F8_INDEX] = 8;
                     break;
+                case I16_TYPE:
+                    sizes[I16_INDEX] = 16;
+                    break;
             }
         }
 
@@ -1020,6 +1028,8 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
                     return I8_TYPE;
                 case F8_INDEX:
                     return F8_TYPE;
+                case I16_INDEX:
+                    return I16_TYPE;
             }
             return UNDEFINED_CODE;
         }

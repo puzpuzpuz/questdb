@@ -91,6 +91,7 @@ public class CompiledFilterIRSerializerTest extends BaseFunctionFactoryTest {
                     .col("atimestamp", ColumnType.TIMESTAMP)
                     .col("adouble", ColumnType.DOUBLE)
                     .col("astring", ColumnType.STRING)
+                    .col("along128", ColumnType.LONG128)
                     .timestamp();
             CairoTestUtils.create(model);
         }
@@ -201,6 +202,7 @@ public class CompiledFilterIRSerializerTest extends BaseFunctionFactoryTest {
         typeToColumn.put("i64", new String[]{"along", "ageolong", "adate", "atimestamp"});
         typeToColumn.put("f32", new String[]{"afloat"});
         typeToColumn.put("f64", new String[]{"adouble"});
+        typeToColumn.put("i128", new String[]{"along128"});
 
         for (String type : typeToColumn.keySet()) {
             for (String col : typeToColumn.get(type)) {
@@ -452,6 +454,8 @@ public class CompiledFilterIRSerializerTest extends BaseFunctionFactoryTest {
         filterToOptions.put("atimestamp <> null", 8);
         filterToOptions.put("adouble = 0", 8);
         filterToOptions.put("adouble = 0 and along = 0", 8);
+        // 16B
+        filterToOptions.put("along128 = along128", 16);
 
         for (Map.Entry<String, Integer> entry : filterToOptions.entrySet()) {
             int options = serialize(entry.getKey(), false, false, false);
@@ -833,6 +837,8 @@ public class CompiledFilterIRSerializerTest extends BaseFunctionFactoryTest {
                     return "f32";
                 case F8_TYPE:
                     return "f64";
+                case I16_TYPE:
+                    return "i128";
                 default:
                     return "unknown: " + type;
             }

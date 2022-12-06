@@ -34,6 +34,7 @@ enum class data_type_t : uint8_t {
     f32,
     i64,
     f64,
+    i128,
 };
 
 enum class data_kind_t : uint8_t {
