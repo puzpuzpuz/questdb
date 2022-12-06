@@ -47,6 +47,36 @@ import java.util.Arrays;
  * | opcode | options | payload |
  * | int    | int     | long    |
  * </pre>
+ *
+ * The IR language uses stack machine semantics. It is as if each instruction
+ * pushes its result onto a virtual stack, and each instruction that requires
+ * inputs pops those off the stack. For example, the following expression:
+ *
+ * <pre>
+ * 1 + 2 != 3
+ * </pre>
+ *
+ * ... could be represented in the IR language as
+ *
+ * <pre>
+ * imm 1    ; push the number 1 onto the stack
+ * imm 2    ; push the number 2 onto the stack
+ * add      ; pops 1 and 2, adds them, pushes 3
+ * imm 3    ; push the number 3 onto the stack
+ * neq      ; pops 3 and 3, compares them, pushes false
+ * </pre>
+ *
+ * At the end of this program, there is only one value (false) on the stack,
+ * representing the result of the program. Because the IR language is used for
+ * SQL filters, which are boolean expressions, the result of an IR language
+ * program must always be a boolean.
+ *
+ * The stack used to pass around intermediate values is compiled away in the
+ * second phase of compilation, in which the IR program is compiled into native
+ * machine code. During this process, the stack machine semantics of the IR
+ * program are converted to the native processor's register machine model. As
+ * such, the final program uses registers and the call stack to track
+ * intermediate values.
  */
 public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Visitor, Mutable {
 
