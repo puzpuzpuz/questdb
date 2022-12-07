@@ -129,6 +129,7 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
     private boolean forceScalarMode;
     private MemoryCARW memory;
     private final LongObjHashMap.LongObjConsumer<ExpressionNode> backfillNodeConsumer = this::backfillNode;
+    private final IntStack functionArgumentType = new IntStack(1);
     private RecordMetadata metadata;
     private PageFrameCursor pageFrameCursor;
 
@@ -140,6 +141,7 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
         forceScalarMode = false;
         predicateContext.clear();
         backfillNodes.clear();
+        functionArgumentType.clear();
     }
 
     @Override
@@ -150,6 +152,14 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
                     .put(node.token);
         }
 
+        // Check if we're entering a function with well-known argument types.
+        // This allows us to skip constant backfilling, since we know their types up front
+        if (node.type == ExpressionNode.FUNCTION) {
+            if (Chars.equals(node.token, "to_long128")) {
+                functionArgumentType.push(I8_TYPE);
+            }
+        }
+
         // Check if we're at the start of an arithmetic expression
         predicateContext.onNodeDescended(node);
 
@@ -157,8 +167,12 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
         if (node.type == ExpressionNode.OPERATION && node.paramCount == 1 && Chars.equals(node.token, "-")) {
             ExpressionNode nextNode = node.lhs != null ? node.lhs : node.rhs;
             if (nextNode != null && nextNode.paramCount == 0 && nextNode.type == ExpressionNode.CONSTANT) {
-                // Store negation node for later backfilling
-                serializeConstantStub(node);
+                if (functionArgumentType.notEmpty()) {
+                    serializeConstantInFunctionCall(nextNode, true);
+                } else {
+                    // Store negation node for later backfilling
+                    serializeConstantStub(node);
+                }
                 return false;
             }
         }
@@ -237,8 +251,12 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
                     serializeBindVariable(node);
                     break;
                 case ExpressionNode.CONSTANT:
-                    // Write stub values to be backfilled later
-                    serializeConstantStub(node);
+                    if (functionArgumentType.notEmpty()) {
+                        serializeConstantInFunctionCall(node, false);
+                    } else {
+                        // Write stub values to be backfilled later
+                        serializeConstantStub(node);
+                    }
                     break;
                 default:
                     throw SqlException.position(node.position)
@@ -683,6 +701,7 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
 
     private void serializeFunctionCall(final ExpressionNode node) throws SqlException {
         if (Chars.equals(node.token, "to_long128")) {
+            functionArgumentType.pop();
             putOperand(TO128, 0, 0);
             return;
         }
@@ -690,6 +709,13 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
         throw SqlException.position(node.position)
                 .put("unsupported token: ")
                 .put(node.token);
+    }
+
+    private void serializeConstantInFunctionCall(final ExpressionNode node, boolean negated) throws SqlException {
+        long offset = memory.getAppendOffset();
+        putOperand(UNDEFINED_CODE, UNDEFINED_CODE, 0);
+        int typeCode = functionArgumentType.peek();
+        serializeNumber(offset, node.position, node.token, typeCode, negated);
     }
 
     private void serializeGeoHash(long offset, int position, final ConstantFunction geoHashConstant, int typeCode) throws SqlException {
