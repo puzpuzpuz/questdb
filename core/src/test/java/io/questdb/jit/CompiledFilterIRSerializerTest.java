@@ -362,6 +362,26 @@ public class CompiledFilterIRSerializerTest extends BaseFunctionFactoryTest {
     }
 
     @Test
+    public void testLong128Operator() throws Exception {
+        String[][] columns = new String[][] {
+            { "along", "along" },
+            { "0L",    "0L" },
+            { "along", "0L" },
+            { "along", "-1L" },
+        };
+
+        for (String[] col : columns) {
+            final String lo = col[0];
+            final String hi = col[1];
+            serialize("along128 != to_long128(" + lo + ", " + hi + ")");
+            assertIR("(i64 " + hi + ")(i64 " + lo + ")(to128)(i128 along128)(<>)(ret)");
+        }
+
+        serialize("along128 != to_long128(1 + 2, 3 * 4)");
+        assertIR("(i64 4L)(i64 3L)(*)(i64 2L)(i64 1L)(+)(to128)(i128 along128)(<>)(ret)");
+    }
+
+    @Test
     public void testOperationPriority() throws Exception {
         serialize("(anint + 1) / (3 * anint) - 42.5 > 0.5");
         assertIR("(f32 0.5D)(f32 42.5D)(i32 anint)(i32 3L)(*)(i32 1L)(i32 anint)(+)(/)(-)(>)(ret)");
@@ -818,6 +838,8 @@ public class CompiledFilterIRSerializerTest extends BaseFunctionFactoryTest {
                     return "/";
                 case RET:
                     return "ret";
+                case TO128:
+                    return "to128";
                 default:
                     return "unknown";
             }

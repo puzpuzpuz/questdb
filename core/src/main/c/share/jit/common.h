@@ -62,6 +62,7 @@ enum class opcodes : int32_t {
     Sub,
     Mul,
     Div,
+    To128,
     Rem,
 };
 

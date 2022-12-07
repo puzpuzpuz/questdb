@@ -85,28 +85,29 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
 
     // Opcodes:
     // Return code. Breaks the loop
-    static final int RET = 0; // ret
+    static final int RET   = 0; // ret
     // Constants
-    static final int IMM = 1;
+    static final int IMM   = 1;
     // Columns
-    static final int MEM = 2;
+    static final int MEM   = 2;
     // Bind variables and deferred symbols
-    static final int VAR = 3;
+    static final int VAR   = 3;
     // Operator codes
-    static final int NEG = 4;   // -a
-    static final int NOT = 5;   // !a
-    static final int AND = 6;   // a && b
-    static final int OR  = 7;   // a || b
-    static final int EQ  = 8;   // a == b
-    static final int NE  = 9;   // a != b
-    static final int LT  = 10;  // a <  b
-    static final int LE  = 11;  // a <= b
-    static final int GT  = 12;  // a >  b
-    static final int GE  = 13;  // a >= b
-    static final int ADD = 14;  // a + b
-    static final int SUB = 15;  // a - b
-    static final int MUL = 16;  // a * b
-    static final int DIV = 17;  // a / b
+    static final int NEG   = 4;  // -a
+    static final int NOT   = 5;  // !a
+    static final int AND   = 6;  // a && b
+    static final int OR    = 7;  // a || b
+    static final int EQ    = 8;  // a == b
+    static final int NE    = 9;  // a != b
+    static final int LT    = 10; // a <  b
+    static final int LE    = 11; // a <= b
+    static final int GT    = 12; // a >  b
+    static final int GE    = 13; // a >= b
+    static final int ADD   = 14; // a + b
+    static final int SUB   = 15; // a - b
+    static final int MUL   = 16; // a * b
+    static final int DIV   = 17; // a / b
+    static final int TO128 = 18; // to_long128(a, b)
 
     // Options:
     // Data types
@@ -244,6 +245,8 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
                             .put("unsupported token: ")
                             .put(node.token);
             }
+        } else if (node.type == ExpressionNode.FUNCTION) {
+            serializeFunctionCall(node);
         } else {
             serializeOperator(node.position, node.token, argCount);
         }
@@ -676,6 +679,17 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
         long offset = memory.getAppendOffset();
         backfillNodes.put(offset, node);
         putOperand(UNDEFINED_CODE, UNDEFINED_CODE, 0);
+    }
+
+    private void serializeFunctionCall(final ExpressionNode node) throws SqlException {
+        if (Chars.equals(node.token, "to_long128")) {
+            putOperand(TO128, 0, 0);
+            return;
+        }
+
+        throw SqlException.position(node.position)
+                .put("unsupported token: ")
+                .put(node.token);
     }
 
     private void serializeGeoHash(long offset, int position, final ConstantFunction geoHashConstant, int typeCode) throws SqlException {
