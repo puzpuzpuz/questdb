@@ -117,6 +117,8 @@ inline uint32_t type_shift(data_type_t type) {
         case data_type_t::i64:
         case data_type_t::f64:
             return 3;
+        case data_type_t::i128:
+            return 4;
         default:
             __builtin_unreachable();
     }
