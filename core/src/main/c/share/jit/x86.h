@@ -444,20 +444,15 @@ namespace questdb::x86 {
     }
 
     jit_value_t to128(Compiler &c, const jit_value_t &lhs, const jit_value_t &rhs) {
-        c.comment("to_long128");
+        Xmm hi = c.newXmm("hi");
+        Xmm result = c.newXmm("lo");
 
-        Gpq hi = convert_to_int64(c, lhs);
-        Gpq lo = convert_to_int64(c, rhs);
+        Gpq l = convert_to_int64(c, lhs);
+        Gpq r = convert_to_int64(c, rhs);
 
-        Mem mem = c.newStack(16, 16);
-        c.mov(mem, lo);
-
-        mem.setOffset(8);
-        c.mov(mem, hi);
-
-        Xmm result = c.newXmm("value");
-        mem.setOffset(0);
-        c.movdqu(result, mem);
+        c.movq(hi, l);
+        c.movq(result, r);
+        c.punpcklqdq(result, hi);
 
         return { result, data_type_t::i128, data_kind_t::kMemory };
     }
