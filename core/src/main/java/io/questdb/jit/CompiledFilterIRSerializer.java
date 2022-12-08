@@ -155,7 +155,7 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
         // Check if we're entering a function with well-known argument types.
         // This allows us to skip constant backfilling, since we know their types up front
         if (node.type == ExpressionNode.FUNCTION) {
-            if (Chars.equals(node.token, "to_long128")) {
+            if (Chars.equalsIgnoreCase(node.token, "to_long128")) {
                 functionArgumentType.push(I8_TYPE);
             }
         }
@@ -700,7 +700,7 @@ public class CompiledFilterIRSerializer implements PostOrderTreeTraversalAlgo.Vi
     }
 
     private void serializeFunctionCall(final ExpressionNode node) throws SqlException {
-        if (Chars.equals(node.token, "to_long128")) {
+        if (Chars.equalsIgnoreCase(node.token, "to_long128")) {
             putOperand(TO128, 0, 0);
             functionArgumentType.pop(); // all arguments now serialized
             forceScalarMode = true; // to_long128 cannot be vectorized because it mixes 64-bit inputs with 128-bit outputs
