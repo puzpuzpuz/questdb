@@ -504,11 +504,10 @@ namespace questdb::x86 {
     }
 
     inline Gpq int128_eq(Compiler &c, const Xmm &lhs, const Xmm &rhs) {
-        Xmm dst = c.newXmm();
         Gp mask = c.newInt16();
         Gp r = c.newInt64();
-        c.vpcmpeqb(dst, lhs, rhs);
-        c.vpmovmskb(mask, dst);
+        c.pcmpeqb(lhs, rhs);
+        c.pmovmskb(mask, lhs);
         c.cmp(mask, 0xffff);
         c.sete(r.r8Lo());
         return r.as<Gpq>();
