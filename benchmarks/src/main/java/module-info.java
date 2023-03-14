@@ -3,6 +3,7 @@ module io.questdb.benchmarks {
     requires java.base;
     requires io.questdb;
     requires jmh.core;
+    requires org.lz4.java;
     requires org.apache.logging.log4j;
     requires simpleclient;
     requires simpleclient.common;
