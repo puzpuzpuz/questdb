@@ -267,8 +267,6 @@ public interface CairoConfiguration {
 
     int getPartitionPurgeListCapacity();
 
-    int getQueryCacheEventQueueCapacity();
-
     @NotNull
     default Rnd getRandom() {
         Rnd rnd = RANDOM.get();

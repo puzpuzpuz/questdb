@@ -113,7 +113,6 @@ public abstract class AbstractCairoTest extends AbstractTest {
     protected static int pageFrameMaxRows = -1;
     protected static int pageFrameReduceQueueCapacity = -1;
     protected static int pageFrameReduceShardCount = -1;
-    protected static int queryCacheEventQueueCapacity = -1;
     protected static SecurityContext securityContext;
     protected static String snapshotInstanceId = null;
     protected static Boolean snapshotRecoveryEnabled = null;
@@ -427,7 +426,7 @@ public abstract class AbstractCairoTest extends AbstractTest {
     }
 
     @AfterClass
-    public static void tearDownStatic()  {
+    public static void tearDownStatic() {
         forEachNode(QuestDBTestNode::closeCairo);
         circuitBreaker = Misc.free(circuitBreaker);
         nodes.clear();
