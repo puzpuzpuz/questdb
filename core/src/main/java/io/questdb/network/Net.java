@@ -267,6 +267,8 @@ public final class Net {
 
     public native static int setTcpNoDelay(int fd, boolean noDelay);
 
+    public native static int setTcpQuickAck(int fd, boolean quickAck);
+
     public native static int shutdown(int fd, int how);
 
     public static long sockaddr(CharSequence ipv4address, int port) {

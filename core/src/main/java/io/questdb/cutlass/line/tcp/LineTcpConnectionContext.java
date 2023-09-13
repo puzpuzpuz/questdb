@@ -196,6 +196,7 @@ public class LineTcpConnectionContext extends IOContext<LineTcpConnectionContext
                 throw CairoException.nonCritical().put("failed to start TLS session");
             }
         }
+        socket.setQuickAck(true);
     }
 
     @Override

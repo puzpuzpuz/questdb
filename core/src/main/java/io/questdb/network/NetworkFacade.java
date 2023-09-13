@@ -114,6 +114,8 @@ public interface NetworkFacade {
 
     int setTcpNoDelay(int fd, boolean noDelay);
 
+    int setTcpQuickAck(int fd, boolean quickAck);
+
     int shutdown(int fd, int how);
 
     long sockaddr(int address, int port);

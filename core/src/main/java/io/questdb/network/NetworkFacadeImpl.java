@@ -245,6 +245,11 @@ public class NetworkFacadeImpl implements NetworkFacade {
     }
 
     @Override
+    public int setTcpQuickAck(int fd, boolean quickAck) {
+        return Net.setTcpQuickAck(fd, quickAck);
+    }
+
+    @Override
     public int shutdown(int fd, int how) {
         return Net.shutdown(fd, how);
     }

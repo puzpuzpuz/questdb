@@ -207,6 +207,14 @@ JNIEXPORT jint JNICALL Java_io_questdb_network_Net_setTcpNoDelay
 
 /*
  * Class:     com_questdb_network_Net
+ * Method:    setTcpQuickAck
+ * Signature: (IZ)I
+ */
+JNIEXPORT jint JNICALL Java_io_questdb_network_Net_setTcpQuickAck
+        (JNIEnv *, jclass, jint, jboolean);
+
+/*
+ * Class:     com_questdb_network_Net
  * Method:    setMulticastInterface
  * Signature: (II)I
  */

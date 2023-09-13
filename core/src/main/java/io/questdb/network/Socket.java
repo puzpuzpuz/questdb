@@ -43,6 +43,8 @@ public interface Socket extends QuietCloseable {
      */
     int getFd();
 
+    boolean isClosed();
+
     /**
      * @return true if TLS session was already started.
      */
@@ -77,6 +79,8 @@ public interface Socket extends QuietCloseable {
      * @return send() result; non-negative if there were no errors.
      */
     int send(long bufferPtr, int bufferLen);
+
+    void setQuickAck(boolean quickAck);
 
     /**
      * Does a shutdown() call on the socket.
@@ -120,6 +124,4 @@ public interface Socket extends QuietCloseable {
      * the socket becomes writable.
      */
     boolean wantsTlsWrite();
-
-    boolean isClosed();
 }

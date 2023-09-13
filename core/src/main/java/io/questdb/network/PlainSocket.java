@@ -30,6 +30,7 @@ public class PlainSocket implements Socket {
     private final Log log;
     private final NetworkFacade nf;
     private int fd = -1;
+    private boolean quickAck;
 
     public PlainSocket(NetworkFacade nf, Log log) {
         this.nf = nf;
@@ -42,6 +43,7 @@ public class PlainSocket implements Socket {
             nf.close(fd, log);
             fd = -1;
         }
+        quickAck = false;
     }
 
     @Override
@@ -67,12 +69,24 @@ public class PlainSocket implements Socket {
 
     @Override
     public int recv(long bufferPtr, int bufferLen) {
-        return nf.recvRaw(fd, bufferPtr, bufferLen);
+        int res = nf.recvRaw(fd, bufferPtr, bufferLen);
+        if (quickAck) {
+            nf.setTcpQuickAck(fd, true);
+        }
+        return res;
     }
 
     @Override
     public int send(long bufferPtr, int bufferLen) {
-        return nf.sendRaw(fd, bufferPtr, bufferLen);
+        int res = nf.sendRaw(fd, bufferPtr, bufferLen);
+        if (quickAck) {
+            nf.setTcpQuickAck(fd, true);
+        }
+        return res;
+    }
+
+    public void setQuickAck(boolean quickAck) {
+        this.quickAck = quickAck;
     }
 
     @Override

@@ -357,6 +357,11 @@ JNIEXPORT jint JNICALL Java_io_questdb_network_Net_setTcpNoDelay
     return set_int_sockopt((SOCKET) fd, IPPROTO_TCP, TCP_NODELAY, noDelay);
 }
 
+JNIEXPORT jint JNICALL Java_io_questdb_network_Net_setTcpQuickAck
+        (JNIEnv *e, jclass cl, jint fd, jboolean quickAck) {
+    return 0; // no-op
+}
+
 JNIEXPORT jint JNICALL Java_io_questdb_network_Net_setMulticastInterface
         (JNIEnv *e, jclass cl, jint fd, jint ipv4address) {
     struct in_addr address;

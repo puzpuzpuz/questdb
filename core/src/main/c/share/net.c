@@ -290,6 +290,11 @@ JNIEXPORT jint JNICALL Java_io_questdb_network_Net_setTcpNoDelay
     return set_int_sockopt((int) fd, IPPROTO_TCP, TCP_NODELAY, noDelay);
 }
 
+JNIEXPORT jint JNICALL Java_io_questdb_network_Net_setTcpQuickAck
+        (JNIEnv *e, jclass cl, jint fd, jboolean quickAck) {
+    return set_int_sockopt((int) fd, IPPROTO_TCP, TCP_QUICKACK, quickAck);
+}
+
 JNIEXPORT jint JNICALL Java_io_questdb_network_Net_getTcpNoDelay
         (JNIEnv *e, jclass cl, jint fd) {
     return get_int_sockopt((int) fd, IPPROTO_TCP, TCP_NODELAY);
