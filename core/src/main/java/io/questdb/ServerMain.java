@@ -110,6 +110,10 @@ public class ServerMain implements Closeable {
         return new ServerMain(new Bootstrap(bootstrapConfiguration, Bootstrap.getServerMainArgs(root)));
     }
 
+    public static ServerMain create(String root) {
+        return new ServerMain(Bootstrap.getServerMainArgs(root));
+    }
+
     public static ServerMain createWithoutWalApplyJob(String root, Map<String, String> env) {
         final Map<String, String> newEnv = new HashMap<>(System.getenv());
         newEnv.putAll(env);
@@ -125,10 +129,6 @@ public class ServerMain implements Closeable {
             protected void setupWalApplyJob(WorkerPool workerPool, CairoEngine engine, int sharedWorkerCount) {
             }
         };
-    }
-
-    public static ServerMain create(String root) {
-        return new ServerMain(Bootstrap.getServerMainArgs(root));
     }
 
     public static LineAuthenticatorFactory getLineAuthenticatorFactory(ServerConfiguration configuration) {
@@ -336,7 +336,7 @@ public class ServerMain implements Closeable {
 
                             // wal apply job in the shared pool when there is no dedicated pool
                             if (walApplyEnabled && !config.getWalApplyPoolConfiguration().isEnabled()) {
-                                setupWalApplyJob(sharedPool, engine, sharedPool.getWorkerCount());
+//                                setupWalApplyJob(sharedPool, engine, sharedPool.getWorkerCount());
                             }
                         }
 
@@ -368,12 +368,12 @@ public class ServerMain implements Closeable {
         };
 
         if (walApplyEnabled && !isReadOnly && walSupported && config.getWalApplyPoolConfiguration().isEnabled()) {
-            WorkerPool walApplyWorkerPool = workerPoolManager.getInstance(
-                    config.getWalApplyPoolConfiguration(),
-                    metrics,
-                    WorkerPoolManager.Requester.WAL_APPLY
-            );
-            setupWalApplyJob(walApplyWorkerPool, engine, workerPoolManager.getSharedWorkerCount());
+//            WorkerPool walApplyWorkerPool = workerPoolManager.getInstance(
+//                    config.getWalApplyPoolConfiguration(),
+//                    metrics,
+//                    WorkerPoolManager.Requester.WAL_APPLY
+//            );
+//            setupWalApplyJob(walApplyWorkerPool, engine, workerPoolManager.getSharedWorkerCount());
         }
 
         // http

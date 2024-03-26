@@ -31,6 +31,18 @@ import io.questdb.std.str.LPSZ;
 public interface ColumnTypeDriver {
 
     /**
+     * Appends null encoding to the memory.
+     *
+     * @param dataMem the data memory
+     * @param auxMem  the aux memory (fixed part)
+     */
+    void appendNull(MemoryA dataMem, MemoryA auxMem);
+
+    default void appendNull(MemoryA rowMem) {
+        rowMem.putInt(TableUtils.NULL_LEN); // NULL
+    }
+
+    /**
      * Returns bytes count for the given row count. This method is similar to {@link #getAuxVectorSize(long)}
      * except it is used in the intermediate calculations and must return exact bytes for the row
      * disregarding the N+1 storage model.
@@ -175,11 +187,4 @@ public interface ColumnTypeDriver {
     void setDataVectorEntriesToNull(long dataMemAddr, long rowCount);
 
     void shiftCopyAuxVector(long shift, long src, long srcLo, long srcHi, long dstAddr);
-
-    /**
-     * Appends null encoding to the memory.
-     * @param dataMem the data memory
-     * @param auxMem the aux memory (fixed part)
-     */
-    void appendNull(MemoryA dataMem, MemoryA auxMem);
 }
