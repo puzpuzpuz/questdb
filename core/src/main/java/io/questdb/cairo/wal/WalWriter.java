@@ -74,7 +74,7 @@ public class WalWriter implements TableWriterAPI {
     private final ObjList<Runnable> nullSetters;
     private final Path path;
     private final int rootLen;
-    private final RowImpl row = new RowImpl();
+    private final NoOpRow row = new NoOpRow();
     private final MemoryMA rowMem;
     private final LongList rowValueIsNotNull = new LongList();
     private final TableSequencerAPI sequencer;
@@ -420,7 +420,7 @@ public class WalWriter implements TableWriterAPI {
             }
 
             if (timestampIndex != -1) {
-                row.setTimestamp(timestamp);
+                //row.setTimestamp(timestamp);
             }
             return row;
         } catch (Throwable e) {
@@ -1355,6 +1355,188 @@ public class WalWriter implements TableWriterAPI {
         final boolean async = commitMode == CommitMode.ASYNC;
         rowMem.sync(async);
         events.sync();
+    }
+
+    private static class NoOpRow implements TableWriter.Row {
+        @Override
+        public void append() {
+            // no-op
+        }
+
+        @Override
+        public void cancel() {
+            // no-op
+        }
+
+        @Override
+        public void putBin(int columnIndex, long address, long len) {
+            // no-op
+        }
+
+        @Override
+        public void putBin(int columnIndex, BinarySequence sequence) {
+            // no-op
+        }
+
+        @Override
+        public void putBool(int columnIndex, boolean value) {
+            // no-op
+        }
+
+        @Override
+        public void putByte(int columnIndex, byte value) {
+            // no-op
+        }
+
+        @Override
+        public void putChar(int columnIndex, char value) {
+            // no-op
+        }
+
+        @Override
+        public void putDate(int columnIndex, long value) {
+            // no-op
+        }
+
+        @Override
+        public void putDouble(int columnIndex, double value) {
+            // no-op
+        }
+
+        @Override
+        public void putFloat(int columnIndex, float value) {
+            // no-op
+        }
+
+        @Override
+        public void putGeoHash(int columnIndex, long value) {
+            // no-op
+        }
+
+        @Override
+        public void putGeoHashDeg(int index, double lat, double lon) {
+            // no-op
+        }
+
+        @Override
+        public void putGeoStr(int columnIndex, CharSequence value) {
+            // no-op
+        }
+
+        @Override
+        public void putIPv4(int columnIndex, int value) {
+            // no-op
+        }
+
+        @Override
+        public void putInt(int columnIndex, int value) {
+            // no-op
+        }
+
+        @Override
+        public void putLong(int columnIndex, long value) {
+            // no-op
+        }
+
+        @Override
+        public void putLong128(int columnIndex, long lo, long hi) {
+            // no-op
+        }
+
+        @Override
+        public void putLong256(int columnIndex, long l0, long l1, long l2, long l3) {
+            // no-op
+        }
+
+        @Override
+        public void putLong256(int columnIndex, Long256 value) {
+            // no-op
+        }
+
+        @Override
+        public void putLong256(int columnIndex, CharSequence hexString) {
+            // no-op
+        }
+
+        @Override
+        public void putLong256(int columnIndex, @NotNull CharSequence hexString, int start, int end) {
+            // no-op
+        }
+
+        @Override
+        public void putLong256Utf8(int columnIndex, DirectUtf8Sequence hexString) {
+            // no-op
+        }
+
+        @Override
+        public void putShort(int columnIndex, short value) {
+            // no-op
+        }
+
+        @Override
+        public void putStr(int columnIndex, CharSequence value) {
+            // no-op
+        }
+
+        @Override
+        public void putStr(int columnIndex, char value) {
+            // no-op
+        }
+
+        @Override
+        public void putStr(int columnIndex, CharSequence value, int pos, int len) {
+            // no-op
+        }
+
+        @Override
+        public void putStrUtf8(int columnIndex, DirectUtf8Sequence value, boolean hasNonAsciiChars) {
+            // no-op
+        }
+
+        @Override
+        public void putSym(int columnIndex, CharSequence value) {
+            // no-op
+        }
+
+        @Override
+        public void putSym(int columnIndex, char value) {
+            // no-op
+        }
+
+        @Override
+        public void putSymIndex(int columnIndex, int key) {
+            // no-op
+        }
+
+        @Override
+        public void putSymUtf8(int columnIndex, DirectUtf8Sequence value, boolean hasNonAsciiChars) {
+            // no-op
+        }
+
+        @Override
+        public void putTimestamp(int columnIndex, long value) {
+            // no-op
+        }
+
+        @Override
+        public void putUuid(int columnIndex, CharSequence uuid) {
+            // no-op
+        }
+
+        @Override
+        public void putUuidUtf8(int columnIndex, Utf8Sequence uuid) {
+            // no-op
+        }
+
+        @Override
+        public void putVarchar(int columnIndex, char value) {
+            // no-op
+        }
+
+        @Override
+        public void putVarchar(int columnIndex, Utf8Sequence value) {
+            // no-op
+        }
     }
 
     private class MetadataValidatorService implements MetadataServiceStub {
