@@ -22,45 +22,11 @@
  *
  ******************************************************************************/
 
-package io.questdb.cairo.map;
+package io.questdb.griffin.engine.functions.str;
 
-import io.questdb.cairo.RecordSink;
-import io.questdb.cairo.RecordSinkSPI;
-import io.questdb.cairo.sql.Record;
-
-public interface MapKey extends RecordSinkSPI {
-
-    // Updates key size for var-sized keys and returns the size.
-    long commit();
-
-    void copyFrom(MapKey srcKey);
-
-    default boolean create() {
-        return createValue().isNew();
+public class ToUppercaseVarcharFunctionFactory extends ToUppercaseFunctionFactory {
+    @Override
+    public String getSignature() {
+        return "to_uppercase(Ø)";
     }
-
-    // Commits implicitly.
-    MapValue createValue();
-
-    // Same as createValue(), but doesn't calculate hash code.
-    MapValue createValue(long hashCode);
-
-    // Commits implicitly.
-    MapValue findValue();
-
-    // Commits implicitly.
-    MapValue findValue2();
-
-    // Commits implicitly.
-    MapValue findValue3();
-
-    // Must be called after commit.
-    long hash();
-
-    default boolean notFound() {
-        return findValue() == null;
-    }
-
-    void put(Record record, RecordSink sink);
-
 }
