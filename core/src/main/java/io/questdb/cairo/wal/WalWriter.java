@@ -74,7 +74,7 @@ public class WalWriter implements TableWriterAPI {
     private final ObjList<Runnable> nullSetters;
     private final Path path;
     private final int rootLen;
-    private final RowImpl row = new RowImpl();
+    private final NoOpRow row = new NoOpRow();
     private final MemoryMA rowMem;
     private final LongList rowValueIsNotNull = new LongList();
     private final TableSequencerAPI sequencer;
@@ -420,7 +420,7 @@ public class WalWriter implements TableWriterAPI {
             }
 
             if (timestampIndex != -1) {
-                row.setTimestamp(timestamp);
+                //row.setTimestamp(timestamp);
             }
             return row;
         } catch (Throwable e) {
