@@ -616,7 +616,7 @@ public class O3PartitionPurgeTest extends AbstractCairoTest {
 
     @Test
     public void testTableRecreatedInBeforePartitionDirDelete() throws Exception {
-        //Windows sometimes fails to drop the table on CI and it's not easily reproducible locally
+        // Windows sometimes fails to drop the table on CI and it's not easily reproducible locally
         Assume.assumeFalse(Os.isWindows());
         AtomicBoolean dropTable = new AtomicBoolean();
         Thread recreateTable = new Thread(() -> {
@@ -655,9 +655,6 @@ public class O3PartitionPurgeTest extends AbstractCairoTest {
             }
 
             dropTable.set(true);
-            if (Os.isWindows()) {
-                engine.releaseInactive();
-            }
             purgeJob.drain(0);
             recreateTable.join();
 
@@ -669,7 +666,7 @@ public class O3PartitionPurgeTest extends AbstractCairoTest {
 
     @Test
     public void testTableRecreatedViaRenameInBeforePartitionDirDelete() throws Exception {
-        //Windows sometimes fails to drop the table on CI and it's not easily reproducible locally
+        // Windows sometimes fails to drop the table on CI and it's not easily reproducible locally
         Assume.assumeFalse(Os.isWindows());
         AtomicBoolean dropTable = new AtomicBoolean();
         Thread recreateTable = new Thread(() -> {
@@ -717,7 +714,6 @@ public class O3PartitionPurgeTest extends AbstractCairoTest {
             }
         });
     }
-
 
     @Test
     public void testTableWriterDeletePartitionWhenNoReadersOpen() throws Exception {

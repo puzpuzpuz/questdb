@@ -111,6 +111,8 @@ public interface TableNameRegistry extends Closeable {
      */
     TableToken lockTableName(String tableName, String dirName, int tableId, boolean isWal);
 
+    boolean lockTableName(TableToken tableToken);
+
     /**
      * Purges token from registry after table, and it's WAL segments have been removed on disk. This method is
      * part of async directory purging job.

@@ -362,7 +362,7 @@ public class O3PartitionPurgeJob extends AbstractQueueConsumerJob<O3PartitionPur
     }
 
     private void purgePartition(TableToken tableToken, FilesFacade ff, Path path, String message) {
-        if (engine.lockTableCreate(tableToken)) {
+        if (engine.lockTableName(tableToken)) {
             try {
                 TableToken lastToken = engine.getUpdatedTableToken(tableToken);
                 if (lastToken == tableToken) {
@@ -374,7 +374,7 @@ public class O3PartitionPurgeJob extends AbstractQueueConsumerJob<O3PartitionPur
                     throw new TableReferenceOutOfDateException();
                 }
             } finally {
-                engine.unLockTableCreate(tableToken);
+                engine.unlockTableName(tableToken);
             }
         } else {
             // table is dropped and recreated since we started processing it.
