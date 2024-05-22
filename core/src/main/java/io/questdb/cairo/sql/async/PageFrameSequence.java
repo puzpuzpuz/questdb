@@ -528,11 +528,12 @@ public class PageFrameSequence<T extends StatefulAtom> implements Closeable {
             PageAddressCacheRecord record,
             SqlExecutionCircuitBreaker circuitBreaker
     ) {
-        if (PageFrameReduceJob.consumeQueue(queue, reduceSubSeq, record, circuitBreaker, this)) {
-            Os.pause();
-            return false;
-        }
-        return true;
+//        if (PageFrameReduceJob.consumeQueue(queue, reduceSubSeq, record, circuitBreaker, this)) {
+//            Os.pause();
+//            return false;
+//        }
+        Os.pause();
+        return false;
     }
 
     private void workLocally() {

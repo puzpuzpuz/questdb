@@ -397,61 +397,65 @@ public class GroupByRecordCursorFactory extends AbstractRecordCursorFactory {
                         final int columnSizeShr = frame.getColumnShiftBits(pageColIndex);
                         final long valueAddressSize = frame.getPageSize(pageColIndex);
 
-                        long cursor = pubSeq.next();
-                        if (cursor < 0) {
-                            circuitBreaker.statefulThrowExceptionIfTrippedNoThrottle();
-                            // acquire the slot and DIY the func
-                            final int slot = perWorkerLocks.acquireSlot(workerId, circuitBreaker);
-                            try {
-                                if (keyAddress == 0) {
-                                    vaf.aggregate(valueAddress, valueAddressSize, columnSizeShr, slot);
-                                } else {
-                                    long oldSize = Rosti.getAllocMemory(pRosti[slot]);
-                                    if (!vaf.aggregate(pRosti[slot], keyAddress, valueAddress, valueAddressSize, columnSizeShr, slot)) {
-                                        oomCounter.incrementAndGet();
-                                    }
-                                    raf.updateMemoryUsage(pRosti[slot], oldSize);
-                                }
-                                ownCount++;
-                            } finally {
-                                perWorkerLocks.releaseSlot(slot);
-                            }
-                        } else {
-                            final VectorAggregateEntry entry = entryPool.next();
-                            queuedCount++;
-                            if (keyAddress == 0) {
-                                entry.of(
-                                        vaf,
-                                        null,
-                                        0,
-                                        valueAddress,
-                                        valueAddressSize,
-                                        columnSizeShr,
-                                        doneLatch,
-                                        oomCounter,
-                                        null,
-                                        perWorkerLocks,
-                                        sharedCircuitBreaker
-                                );
+                        while (true) {
+                            long cursor = pubSeq.next();
+                            if (cursor < 0) {
+                                circuitBreaker.statefulThrowExceptionIfTrippedNoThrottle();
+                                Os.pause();
+//                                // acquire the slot and DIY the func
+//                                final int slot = perWorkerLocks.acquireSlot(workerId, circuitBreaker);
+//                                try {
+//                                    if (keyAddress == 0) {
+//                                        vaf.aggregate(valueAddress, valueAddressSize, columnSizeShr, slot);
+//                                    } else {
+//                                        long oldSize = Rosti.getAllocMemory(pRosti[slot]);
+//                                        if (!vaf.aggregate(pRosti[slot], keyAddress, valueAddress, valueAddressSize, columnSizeShr, slot)) {
+//                                            oomCounter.incrementAndGet();
+//                                        }
+//                                        raf.updateMemoryUsage(pRosti[slot], oldSize);
+//                                    }
+//                                    ownCount++;
+//                                } finally {
+//                                    perWorkerLocks.releaseSlot(slot);
+//                                }
                             } else {
-                                entry.of(
-                                        vaf,
-                                        pRosti,
-                                        keyAddress,
-                                        valueAddress,
-                                        valueAddressSize,
-                                        columnSizeShr,
-                                        doneLatch,
-                                        oomCounter,
-                                        raf,
-                                        perWorkerLocks,
-                                        sharedCircuitBreaker
-                                );
+                                final VectorAggregateEntry entry = entryPool.next();
+                                queuedCount++;
+                                if (keyAddress == 0) {
+                                    entry.of(
+                                            vaf,
+                                            null,
+                                            0,
+                                            valueAddress,
+                                            valueAddressSize,
+                                            columnSizeShr,
+                                            doneLatch,
+                                            oomCounter,
+                                            null,
+                                            perWorkerLocks,
+                                            sharedCircuitBreaker
+                                    );
+                                } else {
+                                    entry.of(
+                                            vaf,
+                                            pRosti,
+                                            keyAddress,
+                                            valueAddress,
+                                            valueAddressSize,
+                                            columnSizeShr,
+                                            doneLatch,
+                                            oomCounter,
+                                            raf,
+                                            perWorkerLocks,
+                                            sharedCircuitBreaker
+                                    );
+                                }
+                                queue.get(cursor).entry = entry;
+                                pubSeq.done(cursor);
+                                total++;
+                                break;
                             }
-                            queue.get(cursor).entry = entry;
-                            pubSeq.done(cursor);
                         }
-                        total++;
                     }
                 }
             } catch (DataUnavailableException e) {

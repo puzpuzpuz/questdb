@@ -40,7 +40,6 @@ import io.questdb.griffin.engine.functions.GroupByFunction;
 import io.questdb.griffin.engine.functions.SymbolFunction;
 import io.questdb.griffin.engine.groupby.GroupByAllocator;
 import io.questdb.griffin.engine.groupby.GroupByAllocatorFactory;
-import io.questdb.griffin.engine.groupby.GroupByMergeShardJob;
 import io.questdb.griffin.engine.groupby.GroupByUtils;
 import io.questdb.log.Log;
 import io.questdb.log.LogFactory;
@@ -255,17 +254,21 @@ class AsyncGroupByRecordCursor implements RecordCursor {
 
         try {
             for (int i = 0; i < shardCount; i++) {
-                long cursor = pubSeq.next();
-                if (cursor < 0) {
-                    circuitBreaker.statefulThrowExceptionIfTrippedNoThrottle();
-                    atom.mergeShard(-1, i);
-                    ownCount++;
-                } else {
-                    queue.get(cursor).of(sharedCircuitBreaker, doneLatch, atom, i);
-                    pubSeq.done(cursor);
-                    queuedCount++;
+                while (true) {
+                    long cursor = pubSeq.next();
+                    if (cursor < 0) {
+                        circuitBreaker.statefulThrowExceptionIfTrippedNoThrottle();
+//                    atom.mergeShard(-1, i);
+//                    ownCount++;
+                        Os.pause();
+                    } else {
+                        queue.get(cursor).of(sharedCircuitBreaker, doneLatch, atom, i);
+                        pubSeq.done(cursor);
+                        queuedCount++;
+                        total++;
+                        break;
+                    }
                 }
-                total++;
             }
         } catch (Throwable e) {
             sharedCircuitBreaker.cancel();
@@ -280,15 +283,16 @@ class AsyncGroupByRecordCursor implements RecordCursor {
                 if (circuitBreaker.checkIfTripped()) {
                     sharedCircuitBreaker.cancel();
                 }
+                Os.pause();
 
-                long cursor = subSeq.next();
-                if (cursor > -1) {
-                    GroupByMergeShardTask task = queue.get(cursor);
-                    GroupByMergeShardJob.run(-1, task, subSeq, cursor);
-                    reclaimed++;
-                } else {
-                    Os.pause();
-                }
+//                long cursor = subSeq.next();
+//                if (cursor > -1) {
+//                    GroupByMergeShardTask task = queue.get(cursor);
+//                    GroupByMergeShardJob.run(-1, task, subSeq, cursor);
+//                    reclaimed++;
+//                } else {
+//                    Os.pause();
+//                }
             }
         }
 

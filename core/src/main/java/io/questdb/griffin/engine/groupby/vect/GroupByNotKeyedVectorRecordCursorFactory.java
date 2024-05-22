@@ -130,15 +130,16 @@ public class GroupByNotKeyedVectorRecordCursorFactory extends AbstractRecordCurs
             if (circuitBreaker.checkIfTripped()) {
                 sharedCB.cancel();
             }
+            Os.pause();
 
-            long cursor = subSeq.next();
-            if (cursor > -1) {
-                VectorAggregateTask task = queue.get(cursor);
-                task.entry.run(workerId, subSeq, cursor);
-                reclaimed++;
-            } else {
-                Os.pause();
-            }
+//            long cursor = subSeq.next();
+//            if (cursor > -1) {
+//                VectorAggregateTask task = queue.get(cursor);
+//                task.entry.run(workerId, subSeq, cursor);
+//                reclaimed++;
+//            } else {
+//                Os.pause();
+//            }
         }
         return reclaimed;
     }
