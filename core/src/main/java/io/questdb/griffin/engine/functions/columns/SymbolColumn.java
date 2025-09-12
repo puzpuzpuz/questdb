@@ -97,6 +97,10 @@ public class SymbolColumn extends SymbolFunction implements Function {
         assert !symbolTableStatic || getStaticSymbolTable() != null;
     }
 
+    public int getColumnIndex() {
+        return columnIndex;
+    }
+
     @Override
     public boolean isSymbolTableStatic() {
         return symbolTableStatic;

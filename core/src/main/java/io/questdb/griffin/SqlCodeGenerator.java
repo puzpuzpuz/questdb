@@ -72,6 +72,7 @@ import io.questdb.griffin.engine.LimitRecordCursorFactory;
 import io.questdb.griffin.engine.RecordComparator;
 import io.questdb.griffin.engine.functions.GroupByFunction;
 import io.questdb.griffin.engine.functions.SymbolFunction;
+import io.questdb.griffin.engine.functions.UnaryFunction;
 import io.questdb.griffin.engine.functions.cast.CastByteToCharFunctionFactory;
 import io.questdb.griffin.engine.functions.cast.CastByteToStrFunctionFactory;
 import io.questdb.griffin.engine.functions.cast.CastByteToVarcharFunctionFactory;
@@ -142,6 +143,7 @@ import io.questdb.griffin.engine.groupby.DistinctTimeSeriesRecordCursorFactory;
 import io.questdb.griffin.engine.groupby.FillRangeRecordCursorFactory;
 import io.questdb.griffin.engine.groupby.GroupByNotKeyedRecordCursorFactory;
 import io.questdb.griffin.engine.groupby.GroupByUtils;
+import io.questdb.griffin.engine.groupby.IndexedCountDistinctRecordCursorFactory;
 import io.questdb.griffin.engine.groupby.SampleByFillNoneNotKeyedRecordCursorFactory;
 import io.questdb.griffin.engine.groupby.SampleByFillNoneRecordCursorFactory;
 import io.questdb.griffin.engine.groupby.SampleByFillNullNotKeyedRecordCursorFactory;
@@ -4819,6 +4821,21 @@ public class SqlCodeGenerator implements Mutable, Closeable {
 
             if (keyTypes.getColumnCount() == 0) {
                 assert tempOuterProjectionFunctions.size() == groupByFunctions.size();
+                
+                // Check for indexed count_distinct optimization
+                // This is applicable when:
+                // 1. Query has no WHERE clause (full table scan)
+                // 2. All group by functions are count_distinct on indexed symbol columns
+                // 3. Query targets a single table (not a join or complex subquery)
+                final IntList indexedSymbolColumns = tryOptimizeIndexedCountDistinct(model, groupByFunctions, factory);
+                if (indexedSymbolColumns != null) {
+                    return new IndexedCountDistinctRecordCursorFactory(
+                            outerProjectionMetadata,
+                            factory,
+                            indexedSymbolColumns
+                    );
+                }
+                
                 return new GroupByNotKeyedRecordCursorFactory(
                         asm,
                         configuration,
@@ -4851,6 +4868,65 @@ public class SqlCodeGenerator implements Mutable, Closeable {
             Misc.free(factory);
             throw e;
         }
+    }
+
+    private IntList tryOptimizeIndexedCountDistinct(QueryModel model, ObjList<GroupByFunction> groupByFunctions, RecordCursorFactory factory) {
+        // Must be operating on a single table (check for table token)
+        final TableToken tableToken = factory.getTableToken();
+        if (tableToken == null) {
+            return null;
+        }
+        
+        // Must have no WHERE clause (full table scan)
+        if (model.getWhereClause() != null) {
+            return null;
+        }
+        
+        // Must have no nested joins
+        if (model.getJoinModels().size() > 1) {
+            return null;
+        }
+        
+        // Check that all group by functions are count_distinct on indexed symbol columns
+        final RecordMetadata metadata = factory.getMetadata();
+        final IntList indexedSymbolColumns = new IntList();
+        
+        for (int i = 0, n = groupByFunctions.size(); i < n; i++) {
+            final GroupByFunction func = groupByFunctions.getQuick(i);
+            
+            // Must be count_distinct function
+            if (!Chars.equals("count_distinct", func.getName())) {
+                return null;
+            }
+            
+            // Must be count_distinct with exactly one argument that is a symbol column
+            // CountDistinct functions implement UnaryFunction interface
+            if (!(func instanceof UnaryFunction)) {
+                return null;
+            }
+            
+            final Function arg = ((UnaryFunction) func).getArg();
+            if (arg == null) {
+                return null;
+            }
+            
+            // Check if argument is a symbol column
+            if (!(arg instanceof SymbolColumn)) {
+                return null;
+            }
+            
+            final SymbolColumn symbolColumn = (SymbolColumn) arg;
+            final int columnIndex = symbolColumn.getColumnIndex();
+            
+            // Check if the symbol column is indexed
+            if (!metadata.isColumnIndexed(columnIndex)) {
+                return null;
+            }
+            
+            indexedSymbolColumns.add(columnIndex);
+        }
+        
+        return indexedSymbolColumns.size() > 0 ? indexedSymbolColumns : null;
     }
 
     private RecordCursorFactory generateSelectVirtual(QueryModel model, SqlExecutionContext executionContext) throws SqlException {
