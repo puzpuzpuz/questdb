@@ -56,6 +56,9 @@ public class BatchKeySink implements RecordSinkSPI, Reopenable {
     public BatchKeySink(int batchSize, int keySize) {
         this.batchSize = batchSize;
         this.keySize = keySize;
+        keysAddr = Unsafe.malloc((long) batchSize * keySize, MemoryTag.NATIVE_DEFAULT);
+        hashesAddr = Unsafe.malloc((long) batchSize * Long.BYTES, MemoryTag.NATIVE_DEFAULT);
+        appendAddr = keysAddr;
     }
 
     @Override
